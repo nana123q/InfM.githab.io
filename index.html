@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Желейный спрайт</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+      background: #ffffff;
+    }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background:
+        radial-gradient(circle at top, #f7fbff 0%, #ffffff 50%, #f8f8ff 100%);
+    }
+
+    .stage {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .hint {
+      position: fixed;
+      left: 50%;
+      bottom: 26px;
+      transform: translateX(-50%);
+      font-size: 26px;
+      color: #111;
+      pointer-events: none;
+      z-index: 20;
+    }
+
+    .sprite {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 260px;
+      height: 260px;
+      transform-origin: center center;
+      cursor: grab;
+      user-select: none;
+      touch-action: none;
+      will-change: left, top, transform;
+    }
+
+    .sprite:active {
+      cursor: grabbing;
+    }
+
+    .sprite img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      pointer-events: none;
+      user-select: none;
+      -webkit-user-drag: none;
+      display: block;
+      filter: drop-shadow(0 16px 24px rgba(0, 0, 0, 0.16));
+    }
+  </style>
+</head>
+<body>
+  <div class="stage" id="stage">
+    <div class="sprite" id="sprite">
+      <img id="face" src="1.png" alt="sprite" draggable="false" />
+    </div>
+    <div class="hint">потяни меня! ( &gt; . &lt; )</div>
+  </div>
+
+  <script>
+    const sprite = document.getElementById("sprite");
+    const face = document.getElementById("face");
+
+    const SIZE = 260;
+
+    let x = window.innerWidth / 2 - SIZE / 2;
+    let y = window.innerHeight / 2 - SIZE / 2;
+
+    let isDragging = false;
+    let pointerId = null;
+
+    let dragOffsetX = 0;
+    let dragOffsetY = 0;
+
+    let targetX = x;
+    let targetY = y;
+
+    let jellyScaleX = 1;
+    let jellyScaleY = 1;
+    let jellyRotation = 0;
+
+    let velX = 0;
+    let velY = 0;
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function render() {
+      sprite.style.left = x + "px";
+      sprite.style.top = y + "px";
+      sprite.style.transform = `scale(${jellyScaleX}, ${jellyScaleY}) rotate(${jellyRotation}deg)`;
+    }
+
+    function loop() {
+      const dx = targetX - x;
+      const dy = targetY - y;
+
+      velX += dx * 0.16;
+      velY += dy * 0.16;
+
+      velX *= 0.72;
+      velY *= 0.72;
+
+      x += velX;
+      y += velY;
+
+      const stretchX = 1 + Math.min(Math.abs(velX) / 18, 0.42);
+      const stretchY = 1 + Math.min(Math.abs(velY) / 18, 0.42);
+
+      const squashX = 1 - Math.min(Math.abs(velY) / 30, 0.2);
+      const squashY = 1 - Math.min(Math.abs(velX) / 30, 0.2);
+
+      const targetScaleX = stretchX * squashX;
+      const targetScaleY = stretchY * squashY;
+
+      jellyScaleX += (targetScaleX - jellyScaleX) * 0.22;
+      jellyScaleY += (targetScaleY - jellyScaleY) * 0.22;
+
+      const desiredRotation = clamp(velX * 1.2, -22, 22);
+      jellyRotation += (desiredRotation - jellyRotation) * 0.18;
+
+      if (!isDragging) {
+        jellyScaleX += (1 - jellyScaleX) * 0.14;
+        jellyScaleY += (1 - jellyScaleY) * 0.14;
+        jellyRotation += (0 - jellyRotation) * 0.1;
+      }
+
+      render();
+      requestAnimationFrame(loop);
+    }
+
+    sprite.addEventListener("pointerdown", (e) => {
+      isDragging = true;
+      pointerId = e.pointerId;
+
+      dragOffsetX = e.clientX - x;
+      dragOffsetY = e.clientY - y;
+
+      targetX = x;
+      targetY = y;
+      velX = 0;
+      velY = 0;
+
+      face.src = "2.png";
+
+      sprite.setPointerCapture(pointerId);
+    });
+
+    sprite.addEventListener("pointermove", (e) => {
+      if (!isDragging || e.pointerId !== pointerId) return;
+
+      targetX = clamp(e.clientX - dragOffsetX, 0, window.innerWidth - SIZE);
+      targetY = clamp(e.clientY - dragOffsetY, 0, window.innerHeight - SIZE);
+    });
+
+    function stopDragging() {
+      if (!isDragging) return;
+      isDragging = false;
+      pointerId = null;
+      face.src = "1.png";
+    }
+
+    sprite.addEventListener("pointerup", stopDragging);
+    sprite.addEventListener("pointercancel", stopDragging);
+    sprite.addEventListener("lostpointercapture", stopDragging);
+
+    window.addEventListener("resize", () => {
+      x = clamp(x, 0, window.innerWidth - SIZE);
+      y = clamp(y, 0, window.innerHeight - SIZE);
+      targetX = clamp(targetX, 0, window.innerWidth - SIZE);
+      targetY = clamp(targetY, 0, window.innerHeight - SIZE);
+      render();
+    });
+
+    render();
+    loop();
+  </script>
+</body>
+</html>
