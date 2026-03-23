@@ -1,0 +1,1461 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Домик Мартиши, мяу!</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+      background: #ffffff;
+      cursor: none;
+    }
+
+    body { position: relative; }
+
+    .bg-layer {
+      position: fixed;
+      inset: 0;
+      background: #ffffff;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      transition: background-image 0.35s ease, background-color 0.35s ease, filter 0.3s ease;
+      z-index: 0;
+    }
+
+    .soft-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(255,255,255,0.06);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .stage {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      z-index: 2;
+    }
+
+    .top-buttons {
+      position: fixed;
+      right: 20px;
+      top: 20px;
+      z-index: 40;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      max-width: 1100px;
+      transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+
+    .ui-btn {
+      border: none;
+      border-radius: 999px;
+      padding: 12px 18px;
+      font-size: 16px;
+      cursor: none;
+      background: rgba(255,255,255,0.95);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+      transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.2s ease;
+    }
+
+    .ui-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 12px 24px rgba(0,0,0,0.16);
+    }
+
+    .status-box {
+      position: fixed;
+      right: 20px;
+      top: 190px;
+      z-index: 38;
+      background: rgba(255,255,255,0.88);
+      border-radius: 18px;
+      padding: 10px 14px;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.12);
+      backdrop-filter: blur(8px);
+      font-size: 14px;
+      color: #222;
+      min-width: 280px;
+      line-height: 1.55;
+      transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+
+    .hint {
+      position: fixed;
+      left: 50%;
+      bottom: 22px;
+      transform: translateX(-50%);
+      font-size: 26px;
+      color: #111;
+      pointer-events: none;
+      z-index: 20;
+      text-align: center;
+      background: rgba(255,255,255,0.72);
+      padding: 8px 14px;
+      border-radius: 999px;
+      backdrop-filter: blur(4px);
+      transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+
+    .speech {
+      position: absolute;
+      min-width: 92px;
+      max-width: 320px;
+      padding: 10px 14px;
+      border-radius: 18px;
+      background: white;
+      color: #111;
+      font-size: 18px;
+      text-align: center;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.12);
+      pointer-events: none;
+      opacity: 0;
+      transform: translateY(16px) scale(0.85);
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      z-index: 80;
+      white-space: nowrap;
+    }
+
+    .speech::after {
+      content: "";
+      position: absolute;
+      left: 26px;
+      bottom: -10px;
+      width: 18px;
+      height: 18px;
+      background: white;
+      transform: rotate(45deg);
+      border-radius: 4px;
+    }
+
+    .speech.show {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+
+    .cat-speech {
+      z-index: 79;
+    }
+
+    .sprite,
+    .cat-sprite,
+    .item {
+      position: absolute;
+      transform-origin: center center;
+      cursor: none;
+      user-select: none;
+      touch-action: none;
+      will-change: left, top, transform;
+    }
+
+    .sprite { z-index: 12; }
+    .cat-sprite { z-index: 11; display: none; }
+    .item { z-index: 25; display: none; }
+
+    .sprite img,
+    .cat-sprite img,
+    .item img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      pointer-events: none;
+      user-select: none;
+      -webkit-user-drag: none;
+      display: block;
+      filter: drop-shadow(0 16px 24px rgba(0,0,0,0.18));
+    }
+
+    .item-panel {
+      position: fixed;
+      left: 20px;
+      top: 205px;
+      z-index: 50;
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+      background: rgba(255,255,255,0.94);
+      border-radius: 20px;
+      padding: 12px;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.12);
+      backdrop-filter: blur(8px);
+      max-width: 270px;
+    }
+
+    .item-panel.show { display: flex; }
+
+    .item-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .item-mini-btn {
+      border: none;
+      border-radius: 14px;
+      background: #fff;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+      padding: 8px 10px;
+      font-size: 13px;
+      cursor: none;
+    }
+
+    .particles {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 90;
+      overflow: visible;
+    }
+
+    .particle {
+      position: absolute;
+      left: 0;
+      top: 0;
+      font-size: 22px;
+      opacity: 0;
+      will-change: transform, opacity;
+      animation: popParticle 900ms ease-out forwards;
+      text-shadow: 0 2px 10px rgba(255,255,255,0.7);
+    }
+
+    @keyframes popParticle {
+      0% {
+        opacity: 0;
+        transform: translate(0,0) scale(0.4) rotate(0deg);
+      }
+      15% {
+        opacity: 1;
+        transform: translate(var(--tx), var(--ty)) scale(1.1) rotate(var(--rot));
+      }
+      100% {
+        opacity: 0;
+        transform: translate(calc(var(--tx) * 1.35), calc(var(--ty) * 1.35 - 16px)) scale(0.7) rotate(calc(var(--rot) * 1.5));
+      }
+    }
+
+    .paw-cursor {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 34px;
+      height: 34px;
+      pointer-events: none;
+      z-index: 200;
+      transform: translate(-50%, -50%);
+      filter: drop-shadow(0 2px 6px rgba(0,0,0,0.18));
+      transition: transform 0.06s linear;
+    }
+
+    .paw-cursor::before {
+      content: "🐾";
+      display: block;
+      font-size: 28px;
+      line-height: 34px;
+      text-align: center;
+    }
+
+    .music-panel {
+      position: fixed;
+      left: 20px;
+      top: 20px;
+      z-index: 45;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(255,255,255,0.92);
+      border-radius: 999px;
+      padding: 10px 14px;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.12);
+      backdrop-filter: blur(8px);
+      transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+
+    .music-panel input[type="range"],
+    .scale-box input[type="range"] {
+      width: 110px;
+      cursor: none;
+    }
+
+    .scale-panel {
+      position: fixed;
+      left: 20px;
+      top: 84px;
+      z-index: 45;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      background: rgba(255,255,255,0.92);
+      border-radius: 20px;
+      padding: 12px 14px;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.12);
+      backdrop-filter: blur(8px);
+      transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+
+    .scale-box {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      color: #222;
+    }
+
+    .photo-exit {
+      position: fixed;
+      top: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 120;
+      display: none;
+    }
+
+    .photo-mode .top-buttons,
+    .photo-mode .status-box,
+    .photo-mode .hint,
+    .photo-mode .music-panel,
+    .photo-mode .scale-panel,
+    .photo-mode .item-panel {
+      opacity: 0;
+      transform: translateY(-10px);
+      pointer-events: none;
+    }
+
+    .photo-mode .photo-exit { display: inline-block; }
+
+    @media (max-width: 700px) {
+      .hint { font-size: 20px; bottom: 18px; }
+      .status-box { top: 250px; min-width: 180px; }
+      .music-panel {
+        top: auto;
+        bottom: 20px;
+        left: 20px;
+        border-radius: 20px;
+      }
+      .scale-panel {
+        top: auto;
+        bottom: 86px;
+        left: 20px;
+      }
+      .item-panel {
+        top: auto;
+        bottom: 150px;
+        left: 20px;
+        max-width: 86vw;
+      }
+      .paw-cursor { display: none; }
+      html, body, .ui-btn, .sprite, .cat-sprite, .item, .item-mini-btn, .music-panel input[type="range"], .scale-box input[type="range"] {
+        cursor: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-layer" id="bgLayer"></div>
+  <div class="soft-overlay"></div>
+
+  <div class="stage">
+    <div class="music-panel">
+      <button class="ui-btn" id="musicToggleBtn">музыка: выкл</button>
+      <input id="volumeSlider" type="range" min="0" max="1" step="0.01" value="0.35">
+    </div>
+
+    <div class="scale-panel">
+      <div class="scale-box">
+        <span>Мартиша</span>
+        <input id="martishaScaleSlider" type="range" min="0.5" max="1.8" step="0.01" value="1">
+      </div>
+      <div class="scale-box">
+        <span>Котёнок</span>
+        <input id="catScaleSlider" type="range" min="0.5" max="1.8" step="0.01" value="1">
+      </div>
+    </div>
+
+    <div class="item-panel" id="itemPanel">
+      <div><b>Предметы Мартиши</b></div>
+      <div class="item-row">
+        <button class="item-mini-btn" data-spawn="cake">cake</button>
+        <button class="item-mini-btn" data-spawn="cake1">cake1</button>
+        <button class="item-mini-btn" data-spawn="bunny">bunny</button>
+        <button class="item-mini-btn" data-spawn="tie">tie</button>
+        <button class="item-mini-btn" data-spawn="tie1">tie1</button>
+        <button class="item-mini-btn" data-spawn="iphone">iphone</button>
+        <button class="item-mini-btn" data-spawn="nice">очки</button>
+      </div>
+      <div class="item-row">
+        <button class="item-mini-btn" id="detachAllBtn">открепить всё</button>
+        <button class="item-mini-btn" id="hideItemsBtn">спрятать предметы</button>
+      </div>
+      <div style="font-size:12px; color:#555;">
+        Поднеси предмет к Мартише, чтобы прикрепить. Тортик к ротику = ам!
+      </div>
+    </div>
+
+    <button class="ui-btn photo-exit" id="photoExitBtn">выйти из фото</button>
+
+    <div class="top-buttons">
+      <button class="ui-btn" id="resetBtn">в центр</button>
+      <button class="ui-btn" id="bgBtn">фон!!</button>
+      <button class="ui-btn" id="dressBtn">нажми!</button>
+      <button class="ui-btn" id="moreBtn">ещё!</button>
+      <button class="ui-btn" id="photoBtn">режим фото</button>
+      <button class="ui-btn" id="rotateBtn">повернуть</button>
+      <button class="ui-btn" id="flipBtn">развернуть</button>
+      <button class="ui-btn" id="itemBtn">Предметы мартиши!</button>
+      <button class="ui-btn" id="moodBtn" style="display:none;">Развеселить ее!</button>
+      <button class="ui-btn" id="ruinMoodBtn" style="display:none;">Испортить ей настроение</button>
+      <button class="ui-btn" id="catBtn">добавить котенка!</button>
+    </div>
+
+    <div class="status-box" id="statusBox">
+      наряд: <b id="outfitName">обычный наряд</b><br>
+      счётчик: <b id="outfitCounter">1 / 23</b><br>
+      фон: <b id="bgName">белый</b><br>
+      музыка: <b id="musicState">выкл</b><br>
+      размер Мартиши: <b id="martishaScaleText">100%</b><br>
+      размер котёнка: <b id="catScaleText">100%</b><br>
+      поворот: <b id="rotationText">0°</b><br>
+      сторона: <b id="flipText">обычно</b>
+    </div>
+
+    <div class="speech" id="speech">вау!</div>
+    <div class="speech cat-speech" id="catSpeech">мяу!</div>
+    <div class="particles" id="particles"></div>
+
+    <div class="sprite" id="sprite">
+      <img id="face" src="1.png" alt="sprite" draggable="false" />
+    </div>
+
+    <div class="cat-sprite" id="catSprite">
+      <img id="catFace" src="cat1.png" alt="cat" draggable="false" />
+    </div>
+    <div class="item" id="item-cake"><img src="cake.png" alt="cake"></div>
+    <div class="item" id="item-cake1"><img src="cake1.png" alt="cake1"></div>
+    <div class="item" id="item-bunny"><img src="bunny.png" alt="bunny"></div>
+    <div class="item" id="item-tie"><img src="tie.png" alt="tie"></div>
+    <div class="item" id="item-tie1"><img src="tie1.png" alt="tie1"></div>
+    <div class="item" id="item-iphone"><img src="iphone.png" alt="iphone"></div>
+    <div class="item" id="item-nice"><img src="nice.png" alt="nice"></div>
+
+    <div class="hint">потяни меня! ( &gt; . &lt; )</div>
+  </div>
+
+  <div class="paw-cursor" id="pawCursor"></div>
+
+  <audio id="starsAudio" preload="auto" src="Stars.mp3"></audio>
+  <audio id="meowAudio" preload="auto" src="meow.mp3"></audio>
+  <audio id="bgMusic" preload="auto" loop src="audio.mp3"></audio>
+  <audio id="pamAudio" preload="auto" src="pam.mp3"></audio>
+  <audio id="nomAudio" preload="auto" src="nom.mp3"></audio>
+
+  <script>
+    const sprite = document.getElementById("sprite");
+    const face = document.getElementById("face");
+    const catSprite = document.getElementById("catSprite");
+    const catFace = document.getElementById("catFace");
+    const speech = document.getElementById("speech");
+    const catSpeech = document.getElementById("catSpeech");
+    const resetBtn = document.getElementById("resetBtn");
+    const dressBtn = document.getElementById("dressBtn");
+    const bgBtn = document.getElementById("bgBtn");
+    const moreBtn = document.getElementById("moreBtn");
+    const photoBtn = document.getElementById("photoBtn");
+    const photoExitBtn = document.getElementById("photoExitBtn");
+    const rotateBtn = document.getElementById("rotateBtn");
+    const flipBtn = document.getElementById("flipBtn");
+    const itemBtn = document.getElementById("itemBtn");
+    const itemPanel = document.getElementById("itemPanel");
+    const detachAllBtn = document.getElementById("detachAllBtn");
+    const hideItemsBtn = document.getElementById("hideItemsBtn");
+    const moodBtn = document.getElementById("moodBtn");
+    const ruinMoodBtn = document.getElementById("ruinMoodBtn");
+    const catBtn = document.getElementById("catBtn");
+    const bgLayer = document.getElementById("bgLayer");
+    const outfitName = document.getElementById("outfitName");
+    const outfitCounter = document.getElementById("outfitCounter");
+    const bgName = document.getElementById("bgName");
+    const particles = document.getElementById("particles");
+    const starsAudio = document.getElementById("starsAudio");
+    const meowAudio = document.getElementById("meowAudio");
+    const bgMusic = document.getElementById("bgMusic");
+    const pamAudio = document.getElementById("pamAudio");
+    const nomAudio = document.getElementById("nomAudio");
+    const pawCursor = document.getElementById("pawCursor");
+    const musicToggleBtn = document.getElementById("musicToggleBtn");
+    const volumeSlider = document.getElementById("volumeSlider");
+    const musicState = document.getElementById("musicState");
+    const martishaScaleSlider = document.getElementById("martishaScaleSlider");
+    const catScaleSlider = document.getElementById("catScaleSlider");
+    const martishaScaleText = document.getElementById("martishaScaleText");
+    const catScaleText = document.getElementById("catScaleText");
+    const rotationText = document.getElementById("rotationText");
+    const flipText = document.getElementById("flipText");
+
+    const BASE_SIZE = window.innerWidth <= 700 ? 220 : 280;
+    const BASE_CAT_SIZE = window.innerWidth <= 700 ? 130 : 180;
+
+    const outfits = [
+      { file: "1.png", label: "обычный наряд" },
+      { file: "3.png", label: "старый наряд" },
+      { file: "4.png", label: "купальник" },
+      { file: "5.png", label: "некопара! (чокола)" },
+      { file: "6.png", label: "кангел!" },
+      { file: "7.png", label: "мадока!" },
+      { file: "8.png", label: "… 0_0", special: "не хочу туда..." },
+      { file: "9.png", label: "Саймон!", special: "о, Саймон!" },
+      { file: "10.png", label: "Южный Парк!" },
+      { file: "11.png", label: "Ддлк! (нацуки)", special: "Манга лучшая!" },
+      { file: "12.png", label: "евангелион! (аска)" },
+      { file: "13.png", label: "Артур Морган!" },
+      { file: "14.png", label: "Бубба! (Т.Б)", special: "ЫыыА хрю хрю" },
+      { file: "15.png", label: "Майерс!", special: "…" },
+      { file: "16.png", label: "Джейсон!" },
+      { file: "17.png", label: "соник!" },
+      { file: "18.png", label: "Хотлайн Майями!" },
+      { file: "19.png", label: "Чувак из постала!" },
+      { file: "20.png", label: "Нико Ваншот!", special: "мяу!" },
+      { file: "21.png", label: "Ада Вонг!" },
+      { file: "22.png", label: "Фатал Фрейм!" },
+      { file: "23.png", label: "Saya no uta!", special: "люблю мясо" },
+      { file: "24A.png", label: "24 наряд", special: "что-то мне это напоминает...", moodSpecial: true }
+    ];
+
+    const backgrounds = [
+      { file: "", label: "белый" },
+      { file: "a.png", label: "Некопара фон" },
+      { file: "b.png", label: "миленький фон" },
+      { file: "c.png", label: "еще один миленький фон" },
+      { file: "D.png", label: "фон D" },
+      { file: "F.png", label: "фон F" },
+      { file: "G.png", label: "фон G" }
+    ];
+
+    const outfitPhrases = ["вау!", "ухты!", "красиво!", "я знаю эту игру!"];
+    const bgPhrases = ["фончик!", "милота!", "ух ты!", "красивый фон!"];
+    const grabPhrases = ["эээ", "мя", "ай", "ой", "э!", ">.<", "пу"];
+    const dropPhrases = ["плюх", "бумп", "ой", "мяу", "ыы"];
+    const resetPhrases = ["оп", "в центр!", "хоп", "ой"];
+    const petPhrases = ["мур!", "хи-хи", "ещё!", "мя!", "приятно...", "погладили!", "уруру"];
+    const sad24Phrases = [
+      "что-то мне это напоминает...",
+      "мне как-то не по себе...",
+      "почему мне так тревожно..."
+    ];
+    const happy24Phrases = [
+      "Ладно, проехали!",
+      "Надеюсь тут его нет!",
+      "Все, я снова в порядке!"
+    ];
+    const sparkleSymbols = ["✦", "★", "❤", "♡", "✧", "☆", "❀", "✿"];
+    const catPhrases = ["мяу!", "мрр!", "мя!", "ня!"];
+
+    const itemConfigs = {
+      cake: { width: 110, height: 110, file: "cake.png", type: "cake", attachOffset: { x: 38, y: 128 } },
+      cake1: { width: 110, height: 110, file: "cake1.png", type: "cake", attachOffset: { x: 150, y: 128 } },
+      bunny: { width: 100, height: 100, file: "bunny.png", type: "toy", attachOffset: { x: 160, y: 45 } },
+      tie: { width: 90, height: 90, file: "tie.png", type: "wear", attachOffset: { x: 105, y: 135 } },
+      tie1: { width: 90, height: 90, file: "tie1.png", type: "wear", attachOffset: { x: 118, y: 135 } },
+      iphone: { width: 80, height: 80, file: "iphone.png", type: "prop", attachOffset: { x: 190, y: 165 } },
+      nice: { width: 120, height: 70, file: "nice.png", type: "glasses", attachOffset: { x: 82, y: 80 } }
+    };
+
+    const itemState = {};
+    Object.keys(itemConfigs).forEach(key => {
+      itemState[key] = {
+        el: document.getElementById(`item-${key}`),
+        x: 120 + Math.random() * 180,
+        y: 200 + Math.random() * 160,
+        targetX: 0,
+        targetY: 0,
+        velX: 0,
+        velY: 0,
+        drag: false,
+        pointerId: null,
+        dragOffsetX: 0,
+        dragOffsetY: 0,
+        attached: false,
+        visible: false,
+        eaten: false
+      };
+      itemState[key].targetX = itemState[key].x;
+      itemState[key].targetY = itemState[key].y;
+    });
+
+    let currentOutfit = 0;
+    let currentBg = 0;
+
+    let martishaScale = 1;
+    let catScale = 1;
+
+    let x = window.innerWidth / 2 - (BASE_SIZE * martishaScale) / 2;
+    let y = window.innerHeight / 2 - (BASE_SIZE * martishaScale) / 2;
+
+    let targetX = x;
+    let targetY = y;
+    let velX = 0;
+    let velY = 0;
+    let jellyScaleX = 1;
+    let jellyScaleY = 1;
+    let jellyRotation = 0;
+
+    let visualRotation = 0;
+    let visualFlip = 1;
+
+    let isDragging = false;
+    let pointerId = null;
+    let dragOffsetX = 0;
+    let dragOffsetY = 0;
+
+    let catX = 80;
+    let catY = 80;
+    let catTargetX = 80;
+    let catTargetY = 80;
+    let catVelX = 0;
+    let catVelY = 0;
+    let catJellyScaleX = 1;
+    let catJellyScaleY = 1;
+    let catJellyRotation = 0;
+    let isCatDragging = false;
+    let catPointerId = null;
+    let catDragOffsetX = 0;
+    let catDragOffsetY = 0;
+    let catAdded = false;
+    let catFollowMode = true;
+    let catManualTimer = null;
+
+    let speechTimer = null;
+    let catSpeechTimer = null;
+    let photoMode = false;
+    let petTapCount = 0;
+    let petTapTimer = null;
+
+    let isMusicEnabled = false;
+    let isSad24 = false;
+
+    function getMartishaSize() { return BASE_SIZE * martishaScale; }
+    function getCatSize() { return BASE_CAT_SIZE * catScale; }
+    function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
+    function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+    function is24Outfit() { return currentOutfit === outfits.length - 1; }
+
+    function updateScaleText() {
+      martishaScaleText.textContent = Math.round(martishaScale * 100) + "%";
+      catScaleText.textContent = Math.round(catScale * 100) + "%";
+      rotationText.textContent = visualRotation + "°";
+      flipText.textContent = visualFlip === 1 ? "обычно" : "зеркально";
+    }
+
+    function updateStatus() {
+      outfitName.textContent = is24Outfit() && !isSad24
+        ? "24 наряд (весёлая)"
+        : (is24Outfit() && isSad24 ? "24 наряд (грустная)" : outfits[currentOutfit].label);
+
+      outfitCounter.textContent = `${currentOutfit + 1} / ${outfits.length}`;
+      bgName.textContent = backgrounds[currentBg].label;
+      musicState.textContent = bgMusic.paused ? "выкл" : "вкл";
+      musicToggleBtn.textContent = bgMusic.paused ? "музыка: выкл" : "музыка: вкл";
+      updateScaleText();
+    }
+
+    function applyBackground() {
+      const bg = backgrounds[currentBg];
+      if (!bg.file) {
+        bgLayer.style.backgroundColor = "#ffffff";
+        bgLayer.style.backgroundImage = "none";
+      } else {
+        bgLayer.style.backgroundColor = "#ffffff";
+        bgLayer.style.backgroundImage = `url("${bg.file}")`;
+      }
+
+      if (is24Outfit() && isSad24 && bg.label === "фон G") {
+        showSpeech("убери этот фон, мне страшно...");
+      }
+
+      updateStatus();
+    }
+
+    function moveSpeech() {
+      const size = getMartishaSize();
+      speech.style.left = (x + size / 2 - 40) + "px";
+      speech.style.top = (y - 42) + "px";
+    }
+
+    function moveCatSpeech() {
+      const size = getCatSize();
+      catSpeech.style.left = (catX + size / 2 - 28) + "px";
+      catSpeech.style.top = (catY - 34) + "px";
+    }
+
+    function showSpeech(text) {
+      speech.textContent = text;
+      moveSpeech();
+      speech.classList.add("show");
+      clearTimeout(speechTimer);
+      speechTimer = setTimeout(() => {
+        speech.classList.remove("show");
+      }, 1700);
+    }
+
+    function showCatSpeech(text) {
+      catSpeech.textContent = text;
+      moveCatSpeech();
+      catSpeech.classList.add("show");
+      clearTimeout(catSpeechTimer);
+      catSpeechTimer = setTimeout(() => {
+        catSpeech.classList.remove("show");
+      }, 1100);
+    }
+
+    function spawnParticles(px, py, count = 14, symbols = sparkleSymbols) {
+      for (let i = 0; i < count; i++) {
+        const particle = document.createElement("div");
+        particle.className = "particle";
+        particle.textContent = pick(symbols);
+
+        const angle = Math.random() * Math.PI * 2;
+        const distance = 30 + Math.random() * 80;
+        const tx = Math.cos(angle) * distance;
+        const ty = Math.sin(angle) * distance - 10;
+        const rot = (-120 + Math.random() * 240) + "deg";
+
+        particle.style.left = px + "px";
+        particle.style.top = py + "px";
+        particle.style.setProperty("--tx", `${tx}px`);
+        particle.style.setProperty("--ty", `${ty}px`);
+        particle.style.setProperty("--rot", rot);
+        particle.style.fontSize = (18 + Math.random() * 16) + "px";
+
+        particles.appendChild(particle);
+        setTimeout(() => particle.remove(), 950);
+      }
+    }
+
+    function spawnMartishaParticles(count = 14, symbols = sparkleSymbols) {
+      const size = getMartishaSize();
+      spawnParticles(x + size / 2, y + size / 2 - 20, count, symbols);
+    }
+
+    function spawnCatParticles(count = 10, symbols = ["❤", "♡", "✦"]) {
+      const size = getCatSize();
+      spawnParticles(catX + size / 2, catY + size / 2 - 10, count, symbols);
+    }
+
+    function littleBounce() {
+      jellyScaleX = 1.18;
+      jellyScaleY = 0.82;
+      setTimeout(() => {
+        jellyScaleX = 0.88;
+        jellyScaleY = 1.12;
+      }, 90);
+    }
+
+    function catBounce() {
+      catJellyScaleX = 1.16;
+      catJellyScaleY = 0.84;
+      setTimeout(() => {
+        catJellyScaleX = 0.9;
+        catJellyScaleY = 1.08;
+      }, 90);
+    }
+
+    function updateMoodButtons() {
+      if (is24Outfit() && isSad24) {
+        moodBtn.style.display = "inline-block";
+        ruinMoodBtn.style.display = "none";
+      } else if (is24Outfit() && !isSad24) {
+        moodBtn.style.display = "none";
+        ruinMoodBtn.style.display = "inline-block";
+      } else {
+        moodBtn.style.display = "none";
+        ruinMoodBtn.style.display = "none";
+      }
+    }
+
+    function pauseMusicForSadness() {
+      bgMusic.pause();
+      updateStatus();
+    }
+
+    function tryPlayMusic() {
+      if (!isMusicEnabled) return;
+      if (is24Outfit() && isSad24) return;
+      bgMusic.play().catch(() => {});
+      updateStatus();
+    }
+
+    function setSad24(customText = null) {
+      isSad24 = true;
+      face.src = "24A.png";
+      updateMoodButtons();
+      pauseMusicForSadness();
+      showSpeech(customText || pick(sad24Phrases));
+      if (backgrounds[currentBg].label === "фон G") {
+        setTimeout(() => showSpeech("убери этот фон, мне страшно..."), 900);
+      }
+      updateStatus();
+    }
+
+    function setHappy24() {
+      isSad24 = false;
+      face.src = "24B.png";
+      updateMoodButtons();
+      spawnMartishaParticles(16, ["✦", "★", "♡", "❤"]);
+      showSpeech(pick(happy24Phrases));
+      tryPlayMusic();
+      updateStatus();
+    }
+
+    function playStarsSound() {
+      try { starsAudio.currentTime = 0; starsAudio.play().catch(() => {}); } catch(e) {}
+    }
+
+    function playMeow() {
+      try { meowAudio.currentTime = 0; meowAudio.play().catch(() => {}); } catch(e) {}
+    }
+
+    function playPam() {
+      try { pamAudio.currentTime = 0; pamAudio.play().catch(() => {}); } catch(e) {}
+    }
+
+    function playNom() {
+      try { nomAudio.currentTime = 0; nomAudio.play().catch(() => {}); } catch(e) {}
+    }
+
+    function getMouthPoint() {
+      const size = getMartishaSize();
+      return {
+        x: x + size * 0.52,
+        y: y + size * 0.36
+      };
+    }
+
+    function renderItems() {
+      const martishaSize = getMartishaSize();
+
+      Object.entries(itemState).forEach(([key, st]) => {
+        const cfg = itemConfigs[key];
+        const el = st.el;
+        const scaleFactor = martishaScale * 0.9;
+
+        el.style.width = (cfg.width * scaleFactor) + "px";
+        el.style.height = (cfg.height * scaleFactor) + "px";
+        el.style.display = st.visible && !st.eaten ? "block" : "none";
+
+        if (st.attached) {
+          const offX = cfg.attachOffset.x * martishaScale;
+          const offY = cfg.attachOffset.y * martishaScale;
+          st.x = x + (visualFlip === 1 ? offX : martishaSize - offX - cfg.width * scaleFactor);
+          st.y = y + offY;
+          st.targetX = st.x;
+          st.targetY = st.y;
+        }
+
+        el.style.left = st.x + "px";
+        el.style.top = st.y + "px";
+      });
+    }
+
+    function render() {
+      const martishaSize = getMartishaSize();
+      sprite.style.width = martishaSize + "px";
+      sprite.style.height = martishaSize + "px";
+      sprite.style.left = x + "px";
+      sprite.style.top = y + "px";
+      sprite.style.transform = `scale(${jellyScaleX * visualFlip}, ${jellyScaleY}) rotate(${visualRotation + jellyRotation}deg)`;
+
+      const cSize = getCatSize();
+      catSprite.style.width = cSize + "px";
+      catSprite.style.height = cSize + "px";
+      catSprite.style.left = catX + "px";
+      catSprite.style.top = catY + "px";
+      catSprite.style.transform = `scale(${catJellyScaleX}, ${catJellyScaleY}) rotate(${catJellyRotation}deg)`;
+
+      renderItems();
+      moveSpeech();
+      moveCatSpeech();
+    }
+
+    function loop() {
+      const martishaSize = getMartishaSize();
+      const dx = targetX - x;
+      const dy = targetY - y;
+
+      velX += dx * 0.16;
+      velY += dy * 0.16;
+      velX *= 0.72;
+      velY *= 0.72;
+      x += velX;
+      y += velY;
+
+      const maxX = window.innerWidth - martishaSize;
+      const maxY = window.innerHeight - martishaSize;
+
+      x = clamp(x, 0, maxX);
+      y = clamp(y, 0, maxY);
+      targetX = clamp(targetX, 0, maxX);
+      targetY = clamp(targetY, 0, maxY);
+
+      const stretchX = 1 + Math.min(Math.abs(velX) / 18, 0.42);
+      const stretchY = 1 + Math.min(Math.abs(velY) / 18, 0.42);
+      const squashX = 1 - Math.min(Math.abs(velY) / 30, 0.2);
+      const squashY = 1 - Math.min(Math.abs(velX) / 30, 0.2);
+
+      jellyScaleX += ((stretchX * squashX) - jellyScaleX) * 0.22;
+      jellyScaleY += ((stretchY * squashY) - jellyScaleY) * 0.22;
+      jellyRotation += (clamp(velX * 1.2, -22, 22) - jellyRotation) * 0.18;
+
+      if (!isDragging) {
+        jellyScaleX += (1 - jellyScaleX) * 0.14;
+        jellyScaleY += (1 - jellyScaleY) * 0.14;
+        jellyRotation += (0 - jellyRotation) * 0.1;
+      }
+
+      if (catAdded) {
+        if (catFollowMode && !isCatDragging) {
+          const targetOffsetX = visualFlip === 1 ? -110 : 110;
+          const targetOffsetY = 95;
+          const cSize = getCatSize();
+          catTargetX = clamp(x + targetOffsetX, 0, window.innerWidth - cSize);
+          catTargetY = clamp(y + targetOffsetY, 0, window.innerHeight - cSize);
+        }
+
+        const cSize = getCatSize();
+        const cdx = catTargetX - catX;
+        const cdy = catTargetY - catY;
+
+        catVelX += cdx * 0.12;
+        catVelY += cdy * 0.12;
+        catVelX *= 0.76;
+        catVelY *= 0.76;
+        catX += catVelX;
+        catY += catVelY;
+
+        const catMaxX = window.innerWidth - cSize;
+        const catMaxY = window.innerHeight - cSize;
+
+        catX = clamp(catX, 0, catMaxX);
+        catY = clamp(catY, 0, catMaxY);
+        catTargetX = clamp(catTargetX, 0, catMaxX);
+        catTargetY = clamp(catTargetY, 0, catMaxY);
+
+        const cStretchX = 1 + Math.min(Math.abs(catVelX) / 18, 0.35);
+        const cStretchY = 1 + Math.min(Math.abs(catVelY) / 18, 0.35);
+        const cSquashX = 1 - Math.min(Math.abs(catVelY) / 30, 0.16);
+        const cSquashY = 1 - Math.min(Math.abs(catVelX) / 30, 0.16);
+
+        catJellyScaleX += ((cStretchX * cSquashX) - catJellyScaleX) * 0.22;
+        catJellyScaleY += ((cStretchY * cSquashY) - catJellyScaleY) * 0.22;
+        catJellyRotation += (clamp(catVelX * 1.2, -18, 18) - catJellyRotation) * 0.18;
+
+        if (!isCatDragging) {
+          catJellyScaleX += (1 - catJellyScaleX) * 0.14;
+          catJellyScaleY += (1 - catJellyScaleY) * 0.14;
+          catJellyRotation += (0 - catJellyRotation) * 0.1;
+        }
+      }
+
+      Object.entries(itemState).forEach(([key, st]) => {
+        if (!st.visible || st.eaten || st.attached) return;
+
+        const cfg = itemConfigs[key];
+        st.velX += (st.targetX - st.x) * 0.15;
+        st.velY += (st.targetY - st.y) * 0.15;
+        st.velX *= 0.72;
+        st.velY *= 0.72;
+        st.x += st.velX;
+        st.y += st.velY;
+
+        const maxItemX = window.innerWidth - cfg.width * martishaScale * 0.9;
+        const maxItemY = window.innerHeight - cfg.height * martishaScale * 0.9;
+        st.x = clamp(st.x, 0, maxItemX);
+        st.y = clamp(st.y, 0, maxItemY);
+      });
+
+      render();
+      requestAnimationFrame(loop);
+    }
+
+    function attachIfClose(key) {
+      const st = itemState[key];
+      const cfg = itemConfigs[key];
+      if (!st.visible || st.eaten) return;
+
+      const itemCenterX = st.x + (cfg.width * martishaScale * 0.9) / 2;
+      const itemCenterY = st.y + (cfg.height * martishaScale * 0.9) / 2;
+      const martishaCenterX = x + getMartishaSize() / 2;
+      const martishaCenterY = y + getMartishaSize() / 2;
+
+      const dist = Math.hypot(itemCenterX - martishaCenterX, itemCenterY - martishaCenterY);
+
+      if (cfg.type === "cake") {
+        const mouth = getMouthPoint();
+        const mouthDist = Math.hypot(itemCenterX - mouth.x, itemCenterY - mouth.y);
+        if (mouthDist < 70 * martishaScale) {
+          st.visible = false;
+          st.eaten = true;
+          st.attached = false;
+          playNom();
+          showSpeech("ням!");
+          spawnMartishaParticles(12, ["❤", "✦", "☆"]);
+          return;
+        }
+      }
+
+      if (dist < 120 * martishaScale) {
+        st.attached = true;
+        showSpeech("прикрепилось!");
+      }
+    }
+
+    function detachAllItems() {
+      Object.values(itemState).forEach(st => {
+        st.attached = false;
+      });
+      showSpeech("открепила!");
+    }
+
+    dressBtn.addEventListener("click", () => {
+      currentOutfit = (currentOutfit + 1) % outfits.length;
+      const outfit = outfits[currentOutfit];
+
+      if (outfit.moodSpecial) {
+        playStarsSound();
+        spawnMartishaParticles();
+        littleBounce();
+        setSad24();
+      } else {
+        isSad24 = false;
+        face.src = outfit.file;
+        updateMoodButtons();
+        playStarsSound();
+        spawnMartishaParticles();
+        littleBounce();
+        showSpeech(outfit.special || pick(outfitPhrases));
+        tryPlayMusic();
+      }
+
+      updateStatus();
+    });
+
+    moodBtn.addEventListener("click", () => {
+      setHappy24();
+      littleBounce();
+      playStarsSound();
+    });
+
+    ruinMoodBtn.addEventListener("click", () => {
+      setSad24("Зачем ты это делаешь...");
+    });
+
+    bgBtn.addEventListener("click", () => {
+      currentBg = (currentBg + 1) % backgrounds.length;
+      applyBackground();
+      if (!(is24Outfit() && isSad24 && backgrounds[currentBg].label === "фон G")) {
+        showSpeech(pick(bgPhrases));
+      }
+    });
+
+    moreBtn.addEventListener("click", () => {
+      const actions = [
+        () => { spawnMartishaParticles(18); showSpeech("блёстки!"); playStarsSound(); },
+        () => { jellyRotation += 18; jellyScaleX = 0.9; jellyScaleY = 1.12; showSpeech("вии!"); },
+        () => {
+          const martishaSize = getMartishaSize();
+          targetX = clamp(x + (-60 + Math.random() * 120), 0, window.innerWidth - martishaSize);
+          targetY = clamp(y + (-60 + Math.random() * 120), 0, window.innerHeight - martishaSize);
+          showSpeech("прыг!");
+        },
+        () => { spawnMartishaParticles(10, ["❤", "♡", "✿"]); showSpeech("люблю!"); },
+        () => {
+          bgLayer.style.filter = "brightness(1.08) saturate(1.1)";
+          showSpeech("сияю!");
+          setTimeout(() => { bgLayer.style.filter = "none"; }, 400);
+        }
+      ];
+      pick(actions)();
+      littleBounce();
+    });
+
+    function enterPhotoMode() {
+      photoMode = true;
+      document.body.classList.add("photo-mode");
+      playPam();
+    }
+
+    function exitPhotoMode() {
+      photoMode = false;
+      document.body.classList.remove("photo-mode");
+    }
+
+    photoBtn.addEventListener("click", () => {
+      enterPhotoMode();
+      showSpeech("фотооо!");
+    });
+
+    photoExitBtn.addEventListener("click", () => {
+      exitPhotoMode();
+      showSpeech("вернулась!");
+    });
+
+    rotateBtn.addEventListener("click", () => {
+      visualRotation = (visualRotation + 20) % 360;
+      showSpeech("круть!");
+      updateStatus();
+      render();
+    });
+
+    flipBtn.addEventListener("click", () => {
+      visualFlip *= -1;
+      showSpeech("перевернулась!");
+      updateStatus();
+      render();
+    });
+
+    itemBtn.addEventListener("click", () => {
+      itemPanel.classList.toggle("show");
+      showSpeech(itemPanel.classList.contains("show") ? "мои вещи!" : "спрятала вещи!");
+    });
+
+    document.querySelectorAll("[data-spawn]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const key = btn.dataset.spawn;
+        const st = itemState[key];
+        st.visible = true;
+        st.eaten = false;
+        st.attached = false;
+        st.x = x + 30 + Math.random() * 100;
+        st.y = y + 30 + Math.random() * 120;
+        st.targetX = st.x;
+        st.targetY = st.y;
+        showSpeech("предметик!");
+        spawnMartishaParticles(8, ["✦", "☆", "♡"]);
+        render();
+      });
+    });
+
+    detachAllBtn.addEventListener("click", detachAllItems);
+
+    hideItemsBtn.addEventListener("click", () => {
+      Object.values(itemState).forEach(st => {
+        st.visible = false;
+        st.attached = false;
+      });
+      showSpeech("вещи спрятаны!");
+    });
+
+    catBtn.addEventListener("click", () => {
+      catAdded = !catAdded;
+      catSprite.style.display = catAdded ? "block" : "none";
+      catBtn.textContent = catAdded ? "убрать котенка!" : "добавить котенка!";
+
+      if (catAdded) {
+        const martishaSize = getMartishaSize();
+        catX = clamp(x - 90, 0, window.innerWidth - getCatSize());
+        catY = clamp(y + martishaSize - 120, 0, window.innerHeight - getCatSize());
+        catTargetX = catX;
+        catTargetY = catY;
+        catFollowMode = true;
+        showSpeech("котёнок пришёл!");
+        showCatSpeech("мяу!");
+        spawnCatParticles();
+      } else {
+        showSpeech("котёнок ушёл...");
+      }
+
+      render();
+    });
+
+    musicToggleBtn.addEventListener("click", () => {
+      isMusicEnabled = !isMusicEnabled;
+      if (isMusicEnabled) tryPlayMusic();
+      else bgMusic.pause();
+      updateStatus();
+    });
+
+    volumeSlider.addEventListener("input", () => {
+      bgMusic.volume = parseFloat(volumeSlider.value);
+      meowAudio.volume = parseFloat(volumeSlider.value);
+      starsAudio.volume = parseFloat(volumeSlider.value);
+      pamAudio.volume = parseFloat(volumeSlider.value);
+      nomAudio.volume = parseFloat(volumeSlider.value);
+    });
+
+    martishaScaleSlider.addEventListener("input", () => {
+      const oldSize = getMartishaSize();
+      const centerX = x + oldSize / 2;
+      const centerY = y + oldSize / 2;
+
+      martishaScale = parseFloat(martishaScaleSlider.value);
+
+      const newSize = getMartishaSize();
+      x = clamp(centerX - newSize / 2, 0, window.innerWidth - newSize);
+      y = clamp(centerY - newSize / 2, 0, window.innerHeight - newSize);
+      targetX = x;
+      targetY = y;
+
+      updateStatus();
+      render();
+    });
+
+    catScaleSlider.addEventListener("input", () => {
+      const oldSize = getCatSize();
+      const centerX = catX + oldSize / 2;
+      const centerY = catY + oldSize / 2;
+
+      catScale = parseFloat(catScaleSlider.value);
+
+      const newSize = getCatSize();
+      catX = clamp(centerX - newSize / 2, 0, window.innerWidth - newSize);
+      catY = clamp(centerY - newSize / 2, 0, window.innerHeight - newSize);
+      catTargetX = catX;
+      catTargetY = catY;
+
+      updateStatus();
+      render();
+    });
+
+    sprite.addEventListener("pointerdown", (e) => {
+      isDragging = true;
+      pointerId = e.pointerId;
+      dragOffsetX = e.clientX - x;
+      dragOffsetY = e.clientY - y;
+      targetX = x;
+      targetY = y;
+      velX = 0;
+      velY = 0;
+      showSpeech(pick(grabPhrases));
+      sprite.setPointerCapture(pointerId);
+
+      if (!isMusicEnabled) {
+        isMusicEnabled = true;
+        tryPlayMusic();
+      }
+    });
+
+    sprite.addEventListener("pointermove", (e) => {
+      if (!isDragging || e.pointerId !== pointerId) return;
+      const size = getMartishaSize();
+      targetX = clamp(e.clientX - dragOffsetX, 0, window.innerWidth - size);
+      targetY = clamp(e.clientY - dragOffsetY, 0, window.innerHeight - size);
+    });
+
+    function stopDragging() {
+      if (!isDragging) return;
+      isDragging = false;
+      pointerId = null;
+      showSpeech(pick(dropPhrases));
+    }
+
+    sprite.addEventListener("pointerup", stopDragging);
+    sprite.addEventListener("pointercancel", stopDragging);
+    sprite.addEventListener("lostpointercapture", stopDragging);
+
+    sprite.addEventListener("click", () => {
+      petTapCount++;
+      clearTimeout(petTapTimer);
+
+      if (petTapCount >= 3) {
+        petTapCount = 0;
+        showSpeech(pick(petPhrases));
+        spawnMartishaParticles(8, ["❤", "♡", "✦", "✧"]);
+        littleBounce();
+      }
+
+      petTapTimer = setTimeout(() => { petTapCount = 0; }, 500);
+    });
+
+    catSprite.addEventListener("pointerdown", (e) => {
+      if (!catAdded) return;
+      isCatDragging = true;
+      catFollowMode = false;
+      clearTimeout(catManualTimer);
+      catPointerId = e.pointerId;
+      catDragOffsetX = e.clientX - catX;
+      catDragOffsetY = e.clientY - catY;
+      catTargetX = catX;
+      catTargetY = catY;
+      catVelX = 0;
+      catVelY = 0;
+      showCatSpeech("мя!");
+      catSprite.setPointerCapture(catPointerId);
+      e.stopPropagation();
+    });
+
+    catSprite.addEventListener("pointermove", (e) => {
+      if (!isCatDragging || e.pointerId !== catPointerId) return;
+      const size = getCatSize();
+      catTargetX = clamp(e.clientX - catDragOffsetX, 0, window.innerWidth - size);
+      catTargetY = clamp(e.clientY - catDragOffsetY, 0, window.innerHeight - size);
+    });
+
+    function stopCatDragging() {
+      if (!isCatDragging) return;
+      isCatDragging = false;
+      catPointerId = null;
+      showCatSpeech("мр!");
+      clearTimeout(catManualTimer);
+      catManualTimer = setTimeout(() => {
+        catFollowMode = true;
+        showCatSpeech("иду!");
+      }, 2000);
+    }
+
+    catSprite.addEventListener("pointerup", stopCatDragging);
+    catSprite.addEventListener("pointercancel", stopCatDragging);
+    catSprite.addEventListener("lostpointercapture", stopCatDragging);
+
+    catSprite.addEventListener("click", (e) => {
+      e.stopPropagation();
+      playMeow();
+      catFace.src = "cat2.png";
+      showCatSpeech(pick(catPhrases));
+      spawnCatParticles(8, ["❤", "♡", "✦"]);
+      catBounce();
+      setTimeout(() => { catFace.src = "cat1.png"; }, 1000);
+    });
+
+    Object.entries(itemState).forEach(([key, st]) => {
+      const el = st.el;
+
+      el.addEventListener("pointerdown", (e) => {
+        if (!st.visible || st.eaten) return;
+        st.drag = true;
+        st.pointerId = e.pointerId;
+        st.attached = false;
+        st.dragOffsetX = e.clientX - st.x;
+        st.dragOffsetY = e.clientY - st.y;
+        st.targetX = st.x;
+        st.targetY = st.y;
+        st.velX = 0;
+        st.velY = 0;
+        el.setPointerCapture(st.pointerId);
+        showSpeech("взяла!");
+        e.stopPropagation();
+      });
+
+      el.addEventListener("pointermove", (e) => {
+        if (!st.drag || e.pointerId !== st.pointerId) return;
+        const cfg = itemConfigs[key];
+        const itemW = cfg.width * martishaScale * 0.9;
+        const itemH = cfg.height * martishaScale * 0.9;
+        st.targetX = clamp(e.clientX - st.dragOffsetX, 0, window.innerWidth - itemW);
+        st.targetY = clamp(e.clientY - st.dragOffsetY, 0, window.innerHeight - itemH);
+      });
+
+      function endItemDrag(e) {
+        if (!st.drag) return;
+        st.drag = false;
+        st.pointerId = null;
+        attachIfClose(key);
+        e.stopPropagation();
+      }
+
+      el.addEventListener("pointerup", endItemDrag);
+      el.addEventListener("pointercancel", endItemDrag);
+      el.addEventListener("lostpointercapture", () => {
+        if (!st.drag) return;
+        st.drag = false;
+        st.pointerId = null;
+        attachIfClose(key);
+      });
+
+      el.addEventListener("dblclick", (e) => {
+        if (!st.visible || st.eaten) return;
+        st.attached = !st.attached;
+        showSpeech(st.attached ? "прикрепила!" : "открепила!");
+        e.stopPropagation();
+      });
+    });
+
+    resetBtn.addEventListener("click", () => {
+      const size = getMartishaSize();
+      x = window.innerWidth / 2 - size / 2;
+      y = window.innerHeight / 2 - size / 2;
+      targetX = x;
+      targetY = y;
+
+      if (catAdded) {
+        const cSize = getCatSize();
+        catX = clamp(x - cSize * 0.7, 0, window.innerWidth - cSize);
+        catY = clamp(y + size - cSize * 0.7, 0, window.innerHeight - cSize);
+        catTargetX = catX;
+        catTargetY = catY;
+      }
+
+      playPam();
+      showSpeech(pick(resetPhrases));
+      render();
+    });
+
+    window.addEventListener("mousemove", (e) => {
+      if (window.innerWidth <= 700) return;
+      pawCursor.style.left = e.clientX + "px";
+      pawCursor.style.top = e.clientY + "px";
+    });
+
+    window.addEventListener("mousedown", () => {
+      if (window.innerWidth <= 700) return;
+      pawCursor.style.transform = "translate(-50%, -50%) scale(0.86)";
+    });
+
+    window.addEventListener("mouseup", () => {
+      if (window.innerWidth <= 700) return;
+      pawCursor.style.transform = "translate(-50%, -50%) scale(1)";
+    });
+
+    window.addEventListener("resize", () => {
+      const martishaSize = getMartishaSize();
+      x = clamp(x, 0, window.innerWidth - martishaSize);
+      y = clamp(y, 0, window.innerHeight - martishaSize);
+      targetX = clamp(targetX, 0, window.innerWidth - martishaSize);
+      targetY = clamp(targetY, 0, window.innerHeight - martishaSize);
+
+      const cSize = getCatSize();
+      catX = clamp(catX, 0, window.innerWidth - cSize);
+      catY = clamp(catY, 0, window.innerHeight - cSize);
+      catTargetX = clamp(catTargetX, 0, window.innerWidth - cSize);
+      catTargetY = clamp(catTargetY, 0, window.innerHeight - cSize);
+
+      Object.entries(itemState).forEach(([key, st]) => {
+        const cfg = itemConfigs[key];
+        const w = cfg.width * martishaScale * 0.9;
+        const h = cfg.height * martishaScale * 0.9;
+        st.x = clamp(st.x, 0, window.innerWidth - w);
+        st.y = clamp(st.y, 0, window.innerHeight - h);
+        st.targetX = clamp(st.targetX, 0, window.innerWidth - w);
+        st.targetY = clamp(st.targetY, 0, window.innerHeight - h);
+      });
+
+      render();
+    });
+
+    bgMusic.volume = parseFloat(volumeSlider.value);
+    meowAudio.volume = parseFloat(volumeSlider.value);
+    starsAudio.volume = parseFloat(volumeSlider.value);
+    pamAudio.volume = parseFloat(volumeSlider.value);
+    nomAudio.volume = parseFloat(volumeSlider.value);
+
+    updateMoodButtons();
+    applyBackground();
+    updateStatus();
+    render();
+    loop();
+
+    window.addEventListener("load", () => {
+      isMusicEnabled = true;
+      tryPlayMusic();
+    });
+  </script>
+</body>
+</html>
